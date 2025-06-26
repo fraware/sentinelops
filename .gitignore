@@ -1,0 +1,82 @@
+# ========================
+# Global ignores
+# ========================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+
+# ========================
+# Rust (edge-agent/)
+# ========================
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# ========================
+# Node / Hardhat (contracts/)
+# ========================
+node_modules/
+dist/
+build/
+.env
+.env.*
+artifacts/
+cache/
+coverage/
+typechain/
+tsconfig.tsbuildinfo
+
+# Hardhat default cache
+hardhat.cache/
+hardhat.artifacts/
+
+# ========================
+# Python (scripts/, proof-engine/, etc.)
+# ========================
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.pkl
+*.ipynb_checkpoints/
+.env
+.venv/
+venv/
+
+# ========================
+# Solidity artifacts (in contracts/)
+# ========================
+*.abi
+*.bin
+
+# ========================
+# Docker
+# ========================
+*.pid
+docker-compose.override.yml
+*.tar
+
+# ========================
+# Lean4 (lean/)
+# ========================
+lean/.lake/
+lean/build/
+lean/lake-manifest.json
+lean/.lakefile.olean
+lean/.lean_cache/
+lean/.lean/
+
+# ========================
+# VSCode + OS-specific
+# ========================
+.vscode/
+.idea/
+*.code-workspace
+
+# ========================
+# Git files
+# ========================
+*.orig
+*.rej
+*.bak
