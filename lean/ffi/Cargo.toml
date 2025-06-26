@@ -1,0 +1,14 @@
+[package]
+name    = "libsentinel_ffi"   # this is the crate name other packages will use
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["rlib", "cdylib"]  # rlib for Rust, cdylib for C/Lean FFI
+
+[dependencies]
+blake3 = "1.5"   # remove if you don’t wrap BLAKE3 in Rust
+libc   = "0.2"
+
+[build-dependencies]
+cc = "1.0"       # needed if you compile `blake3.c` / `ffi.c` with a build script

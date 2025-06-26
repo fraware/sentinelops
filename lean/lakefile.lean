@@ -1,39 +1,24 @@
-/-
-  lakefile.lean  ── Build configuration for the SentinelOps Lean project.
-
-  Directories
-  ───────────
-  • `Sentinel/` namespace (in `PropSound.lean`, `TseitinSound.lean`)
-  • `ffi/`      – C source for Blake3 and the `sentinel_cert_hash` shim
-  • `build/lib` – output shared library `libsentinel_monitor.{so,dylib}`
--/
-
 import Lake
 open Lake DSL
+open System
 
 package sentinel_monitor where
-  -- Lean sources live next to the lakefile
   srcDir := "."
+  moreLeanArgs := #["-DLakeExportRuntime"]
+  moreServerArgs := #[]
+  -- If you use mathlib:
+  -- extraDepTargets := #[`Mathlib]
 
-  -- Build a shared library so Rust can link against it.
-  -- `ffi/ffi.c` and `ffi/blake3.c` are compiled & linked in.
-  moreLeanArgs := #["-DLakeExportRuntime"]     -- export symbols
-  moreServerArgs := #[]                        -- LSP server
+-- Compile C files into a shared library
+extern_lib sentinel_monitor_c where
+  srcDir := "ffi"
+  srcFiles := #["ffi.c", "blake3.c"]
+  buildStatic := false
 
-  extraDepTargets := #[`Mathlib]
-
-  -- C objects to build and link
-  extraObjs :=
-    #[("ffi/ffi.c"), ("ffi/blake3.c")]
-
-/-- Helper target: build + copy so the Rust workspace can find it under `../target/`. -/
+-- Copy the shared lib for Rust
 target copySharedLib : FilePath := do
-  let lib ← fetch <| by
-    target `shared «Package.artifactFile»
-  let out := "../target/libsentinel_monitor.so"
-  IO.FS.createDirAll out.parent!
+  let lib := "build" / "lib" / ("libsentinel_monitor_c" ++ sharedLibExt)
+  let out := ".." / "target" / ("libsentinel_monitor" ++ sharedLibExt)
+  IO.FS.createDirAll (out.parentD!)
   IO.FS.copyFile lib out (overwrite := true)
-  pure out
-
--- Default build also materialises the copy
-packageDepTargets := #[`copySharedLib]
+  return out
