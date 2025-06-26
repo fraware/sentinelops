@@ -1,0 +1,29 @@
+version: "3.9"
+services:
+  zookeeper:
+    image: bitnami/zookeeper:3.9
+    environment: { ALLOW_ANONYMOUS_LOGIN: "yes" }
+
+  kafka:
+    image: bitnami/kafka:3.6
+    environment:
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    depends_on: [zookeeper]
+    ports: ["9092:9092"]
+
+  openplc:
+    image: openplc/openplc_v3
+    volumes:
+      - ./plc_program.st:/plc/plc_application.st:ro
+    ports: ["502:502"]
+
+  edge-agent:
+    build: .
+    environment:
+      PLC_HOST: openplc
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_TRACE_TOPIC: plc.trace
+    depends_on: [openplc, kafka]

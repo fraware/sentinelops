@@ -1,0 +1,15 @@
+[package]
+name    = "ledger"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow        = "1"
+blake3        = "1.5"
+chrono        = "0.4"
+ethers        = { version = "2.0", default-features = false, features = ["http", "legacy-tx", "rustls-tls"] }
+hex           = "0.4"
+quick-xml     = "0.31"
+tokio         = { version = "1", features = ["full"] }
+tokio-postgres = { version = "0.7", features = ["with-uuid-0_8"] }
+pico-args     = "0.5"

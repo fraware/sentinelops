@@ -1,0 +1,91 @@
+# .github/workflows/ci.yml (v0.2 with perf gate)
+# =============================================================
+# Adds a dedicated **perf-gate** job that runs the full latency
+# benchmark (500 samples, 20 s measurement) and fails if p99 > 200 ms.
+# =============================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+      RUSTFLAGS: "-C debuginfo=0"
+      CRITERION_QUICKSTART: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Lake build
+        uses: actions/cache@v4
+        with:
+          path: |
+            lean/build
+            lean/.lake
+          key: ${{ runner.os }}-lean-${{ hashFiles('lean/**', 'lean/lakefile.lean') }}
+
+      - name: Install Lean toolchain
+        run: |
+          curl -sL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | bash -s -- -y
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+          lake --version
+
+      - name: Build Lean shared lib
+        working-directory: lean
+        run: |
+          lake build sentinel_monitor
+          mkdir -p $GITHUB_WORKSPACE/target
+          cp build/lib/libsentinel_monitor.so $GITHUB_WORKSPACE/target/
+
+      - uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo test (baseline)
+        run: cargo test --workspace --all-targets --all-features --exclude proof-engine --no-fail-fast
+
+      - name: proof-engine tests
+        run: cargo test -p proof-engine --lib --tests
+
+      - name: proof-engine tests (model-reuse)
+        run: cargo test -p proof-engine --lib --tests --features model-reuse
+
+      - name: Lean tests
+        working-directory: lean
+        run: lake test
+
+      - name: Criterion latency bench (quick)
+        run: cargo bench -p proof-engine engine_latency -- --quick
+
+  perf-gate:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-perf-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Run latency benchmark (full)
+        run: cargo bench -p proof-engine engine_latency -- --sample-size 500 --measurement-time 20
+      - name: Assert p99 < 200 ms
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y jq bc
+          FILE=$(find target/criterion/engine_latency -name estimates.json | head -n 1)
+          P99_NANO=$(jq '.estimates["Percentiles"]["99.0"].point_estimate' "$FILE")
+          P99_MS=$(python - <<PY "print($P99_NANO/1e6)" PY)
+          echo "p99 latency = $P99_MS ms"
+          if (( $(echo "$P99_MS > 200" | bc -l) )); then echo "Latency regression: p99 > 200 ms"; exit 1; fi
+          echo "Latency within 200 ms budget ✅"
