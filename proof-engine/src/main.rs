@@ -12,6 +12,8 @@ mod dsl;
 mod cnf;
 mod sat;
 
+use simd_json::prelude::*;
+use rdkafka::Message;
 use blake3::Hasher;
 use chrono::{DateTime, Utc};
 use dsl::{Prop, Trace, Var};
@@ -95,7 +97,7 @@ fn hash_trace(trace: &Trace) -> String {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    dotenv::dotenv().ok();
+    dotenvy::dotenv().ok();
     env_logger::init();
 
     let brokers = std::env::var("KAFKA_BROKERS").unwrap_or_else(|_| "localhost:9092".into());
@@ -142,7 +144,14 @@ async fn main() -> anyhow::Result<()> {
                     verdict: if v { "PASS" } else { "FAIL" },
                 };
                 let payload = serde_json::to_vec(&packet)?;
-                producer.send(FutureRecord::to(&proof_topic).payload(&payload), 0).await?;
+                producer
+                    .send(
+                        FutureRecord::<(), _>::to("sentinel.proofs").payload(&bytes),
+                        std::time::Duration::from_secs(0),
+                    )
+                    .await
+                    .map_err(|(e, _)| e)?;
+
             }
         }
         prev_verdicts = verdicts;
@@ -183,7 +192,7 @@ async fn main() -> anyhow::Result<()> {
 
 // #[tokio::main]
 // async fn main() -> anyhow::Result<()> {
-//     dotenv::dotenv().ok();
+//     dotenvy::dotenv().ok();
 //     env_logger::init();
 
 //     let plc_addr = std::env::var("PLC_HOST").unwrap_or_else(|_| "127.0.0.1".into());

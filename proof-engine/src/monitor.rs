@@ -12,10 +12,10 @@ use once_cell::sync::Lazy;
 use std::sync::Mutex;
 use z3::{Config, Context};
 
-static Z3_CTX: Lazy<Context> = Lazy::new(|| {
-    let mut c = Config::new();
-    c.set_timeout_msec(100);
-    Context::new(&c)
+static Z3_CTX: Lazy<Mutex<Context>> = Lazy::new(|| {
+    let mut cfg = Config::new();
+    cfg.set_timeout_msec(100);
+    Mutex::new(Context::new(&cfg))
 });
 
 pub struct PropertyMonitor<'ctx> {
@@ -28,8 +28,8 @@ pub struct PropertyMonitor<'ctx> {
 
 impl<'ctx> PropertyMonitor<'ctx> {
     pub fn new(prop: Prop, horizon: usize) -> Self {
-        let sat = SatCore::new(&*Z3_CTX, horizon);
-        Self { prop, horizon, sat, enc_state: EncoderState::new(10_000), last_core: vec![] }
+        let ctx = Z3_CTX.lock().unwrap();
+        let sat = SatCore::new(&*ctx, horizon);
     }
 
     fn is_boolean_only(p: &Prop) -> bool {

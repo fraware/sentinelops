@@ -1,24 +1,28 @@
 import Lake
-open Lake DSL
-open System
+open Lake.DSL
+open System (FilePath)
+open System.FilePath (mk)
 
-package sentinel_monitor where
-  srcDir := "."
-  moreLeanArgs := #["-DLakeExportRuntime"]
-  moreServerArgs := #[]
-  -- If you use mathlib:
-  -- extraDepTargets := #[`Mathlib]
+def sharedExt : String := ".so"  -- adjust to ".dll" on Windows or ".dylib" on macOS
 
--- Compile C files into a shared library
-extern_lib sentinel_monitor_c where
-  srcDir := "ffi"
-  srcFiles := #["ffi.c", "blake3.c"]
-  buildStatic := false
+package sentinel_monitor
+  (name := "sentinel_monitor")
+  (srcDir := ".")
+  (moreLeanArgs := #["-DLakeExportRuntime"])
 
--- Copy the shared lib for Rust
-target copySharedLib : FilePath := do
-  let lib := "build" / "lib" / ("libsentinel_monitor_c" ++ sharedLibExt)
-  let out := ".." / "target" / ("libsentinel_monitor" ++ sharedLibExt)
-  IO.FS.createDirAll (out.parentD!)
-  IO.FS.copyFile lib out (overwrite := true)
-  return out
+@[default_target]
+extern_lib sentinel_monitor_c
+  (name := "sentinel_monitor_c")
+  (srcDir    := "ffi")
+  (srcFiles  := #["ffi.c", "blake3.c"])
+  (sharedLib := true)
+
+script copySharedLib := do
+  let lib    := mk "build" / mk "lib" / mk ("libsentinel_monitor_c" ++ sharedExt)
+  let outDir := mk ".."    / mk "target"
+  let out    := outDir     / mk ("libsentinel_monitor"    ++ sharedExt)
+  IO.FS.createDirAll outDir
+  let bytes ← IO.FS.readBinFile lib
+  IO.FS.writeBinFile out bytes
+  IO.println s!"Copied {lib} to {out}"
+  pure 0

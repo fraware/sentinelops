@@ -87,25 +87,20 @@ impl<'ctx> SatCore<'ctx> {
     /// Get (or create) a Z3 boolean var by index.
     fn get_var(&mut self, idx: i32) -> Bool<'ctx> {
         let uidx: usize = idx as usize;
+        let len = self.vars.len();
         if uidx >= self.vars.len() {
             let diff = uidx + 1 - self.vars.len();
-            self.vars.extend((0..diff).map(|i| {
-                Bool::new_const(self.ctx, format!("p{}", self.vars.len() + i))
-            }));
+            self.vars.extend((0..diff).map(|i| Bool::new_const(self.ctx, format!("p{}", len + i))));
         }
         self.vars[uidx].clone()
     }
 
     /// Translate a `Clause` to a Z3 AST.
     fn clause_to_ast(&mut self, clause: &Clause) -> Bool<'ctx> {
-        let lits: Vec<Bool<'ctx>> = clause
-            .0
-            .iter()
-            .map(|lit| {
-                let v = self.get_var(lit.var);
-                if lit.neg { v.not() } else { v }
-            })
-            .collect();
+        let lits: Vec<&Bool<'ctx>> = clause.0.iter().map(|l| {
+            let v = self.get_var(l.var);
+            if l.neg { v.not() } else { v }
+        }).collect();
         Bool::or(self.ctx, &lits)
     }
 
@@ -117,6 +112,11 @@ impl<'ctx> SatCore<'ctx> {
         }
     }
 
+    let snapshot: Vec<_> = self.clauses.iter().collect();
+    for cl in snapshot {
+        let ast = self.clause_to_ast(cl);
+        self.solver.assert(&ast);
+    }
     /// Naïve solve: rebuild entire solver from scratch.
     fn solve_naive(&mut self) -> SatResult {
         self.solver.reset();

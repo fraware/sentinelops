@@ -9,6 +9,8 @@ crate-type = ["rlib", "cdylib"]  # rlib for Rust, cdylib for C/Lean FFI
 [dependencies]
 blake3 = "1.5"   # remove if you don’t wrap BLAKE3 in Rust
 libc   = "0.2"
+dotenv = "0.15"
+
 
 [build-dependencies]
 cc = "1.0"       # needed if you compile `blake3.c` / `ffi.c` with a build script
