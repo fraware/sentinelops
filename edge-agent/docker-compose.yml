@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   zookeeper:
     image: bitnami/zookeeper:3.9
@@ -15,10 +14,10 @@ services:
     ports: ["9092:9092"]
 
   openplc:
-    image: openplc/openplc_v3
+    build: ./openplc
+    ports: ["502:502"]
     volumes:
       - ./plc_program.st:/plc/plc_application.st:ro
-    ports: ["502:502"]
 
   edge-agent:
     build: .

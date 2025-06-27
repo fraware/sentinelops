@@ -1,7 +1,11 @@
 # ---------- build stage -------------------------------------------------
 FROM rust:1.78 AS builder
+
+# Install required system packages
+RUN apt-get update && apt-get install -y cmake pkg-config libz-dev
+
 WORKDIR /app
-COPY edge-agent/ .
+COPY . .
 RUN cargo build --release
 
 # ---------- runtime stage -----------------------------------------------
