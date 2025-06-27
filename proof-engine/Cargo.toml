@@ -25,7 +25,7 @@ criterion    = { version = "0.5", optional = true }
 itertools    = "0.12"
 thiserror    = "1"
 z3           = { version = "0.11", features = ["static-link-z3"], default-features = false }
-libsentinel_ffi = { path = "../lean/ffi", package = "libsentinel_ffi" }
+libsentinel_ffi = { git = "https://github.com/fraware/sentinelops.git", package = "libsentinel_ffi", subdir = "lean/ffi" }
 tokio-stream   = { version = "0.1", features = ["sync"] }
 hex            = "0.4"
 dotenvy        = "0.15"          # cross-platform replacement for `dotenv`
