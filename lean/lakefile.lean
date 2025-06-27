@@ -1,28 +1,10 @@
 import Lake
-open Lake.DSL
-open System (FilePath)
-open System.FilePath (mk)
+open Lake DSL
 
-def sharedExt : String := ".so"  -- adjust to ".dll" on Windows or ".dylib" on macOS
+package sentinel_monitor where
+  srcDir := "."
+  moreLeanArgs := #["-DLakeExportRuntime"]
 
-package sentinel_monitor
-  (name := "sentinel_monitor")
-  (srcDir := ".")
-  (moreLeanArgs := #["-DLakeExportRuntime"])
-
-@[default_target]
-extern_lib sentinel_monitor_c
-  (name := "sentinel_monitor_c")
-  (srcDir    := "ffi")
-  (srcFiles  := #["ffi.c", "blake3.c"])
-  (sharedLib := true)
-
-script copySharedLib := do
-  let lib    := mk "build" / mk "lib" / mk ("libsentinel_monitor_c" ++ sharedExt)
-  let outDir := mk ".."    / mk "target"
-  let out    := outDir     / mk ("libsentinel_monitor"    ++ sharedExt)
-  IO.FS.createDirAll outDir
-  let bytes ← IO.FS.readBinFile lib
-  IO.FS.writeBinFile out bytes
-  IO.println s!"Copied {lib} to {out}"
-  pure 0
+/-- Our Lean code lives in `PropSound.lean` and `TseitinSound.lean` so we
+    expose a library named `Sentinel`. -/
+lean_lib Sentinel

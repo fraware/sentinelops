@@ -4,7 +4,7 @@
 // Implements `unsat_recycle` which maintains a rolling window of
 // CNF clauses for each property *cᵢ* across the trace horizon H.
 //
-// Author: ChatGPT (o3) — 26 Jun 2025
+// Author: ChatGPT (o3) — 26 Jun 2025
 // =============================================================
 // Crates
 // ------
@@ -23,10 +23,9 @@
 
 #![allow(clippy::needless_return)]
 
-use itertools::Itertools;
+use z3::{ast::Bool, Context, Solver};
 use std::collections::VecDeque;
 use thiserror::Error;
-use z3::{ast::Bool, Config, Context, Solver};
 
 // ---------------------------
 // Types & Errors
@@ -97,11 +96,12 @@ impl<'ctx> SatCore<'ctx> {
 
     /// Translate a `Clause` to a Z3 AST.
     fn clause_to_ast(&mut self, clause: &Clause) -> Bool<'ctx> {
-        let lits: Vec<&Bool<'ctx>> = clause.0.iter().map(|l| {
+        let lits: Vec<Bool<'ctx>> = clause.0.iter().map(|l| {
             let v = self.get_var(l.var);
             if l.neg { v.not() } else { v }
         }).collect();
-        Bool::or(self.ctx, &lits)
+        let refs: Vec<&Bool<'ctx>> = lits.iter().collect();
+        Bool::or(self.ctx, &refs)
     }
 
     /// Insert new clause, popping the oldest if over capacity.
@@ -112,16 +112,12 @@ impl<'ctx> SatCore<'ctx> {
         }
     }
 
-    let snapshot: Vec<_> = self.clauses.iter().collect();
-    for cl in snapshot {
-        let ast = self.clause_to_ast(cl);
-        self.solver.assert(&ast);
-    }
     /// Naïve solve: rebuild entire solver from scratch.
     fn solve_naive(&mut self) -> SatResult {
         self.solver.reset();
-        for cl in &self.clauses {
-            let ast = self.clause_to_ast(cl);
+        let snapshot: Vec<Clause> = self.clauses.iter().cloned().collect();
+        for cl in snapshot {
+            let ast = self.clause_to_ast(&cl);
             self.solver.assert(&ast);
         }
         match self.solver.check() {
@@ -184,6 +180,11 @@ impl<'ctx> SatCore<'ctx> {
             Ok(self.solve_naive())
         }
     }
+
+    pub fn get_unsat_core(&self) -> Option<Vec<usize>> {
+        // TODO: Implement actual logic
+        None
+    }
 }
 
 // ---------------------------
@@ -192,6 +193,7 @@ impl<'ctx> SatCore<'ctx> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use z3::Config;
 
     fn ctx() -> Context {
         let mut cfg = Config::new();

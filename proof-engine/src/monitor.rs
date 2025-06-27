@@ -5,31 +5,28 @@
 // =============================================================
 
 use crate::cnf::delta_clauses;               // fallback encoder
-use crate::cnf_tseitin::{delta_clauses_tseitin, EncoderState};
 use crate::dsl::{Prop, Trace};
 use crate::sat::{SatCore, SatResult};
-use once_cell::sync::Lazy;
-use std::sync::Mutex;
 use z3::{Config, Context};
 
-static Z3_CTX: Lazy<Mutex<Context>> = Lazy::new(|| {
-    let mut cfg = Config::new();
-    cfg.set_timeout_msec(100);
-    Mutex::new(Context::new(&cfg))
-});
-
-pub struct PropertyMonitor<'ctx> {
+pub struct PropertyMonitor {
     prop: Prop,
     horizon: usize,
-    sat: SatCore<'ctx>,
-    enc_state: EncoderState,       // keeps aux-var mapping
+    ctx: Context,
     pub last_core: Vec<usize>,     // indices of UNSAT core (for UI)
 }
 
-impl<'ctx> PropertyMonitor<'ctx> {
+impl PropertyMonitor {
     pub fn new(prop: Prop, horizon: usize) -> Self {
-        let ctx = Z3_CTX.lock().unwrap();
-        let sat = SatCore::new(&*ctx, horizon);
+        let mut cfg = Config::new();
+        cfg.set_timeout_msec(100);
+        let ctx = Context::new(&cfg);
+        PropertyMonitor {
+            prop,
+            horizon,
+            ctx,
+            last_core: Vec::new(),
+        }
     }
 
     fn is_boolean_only(p: &Prop) -> bool {
@@ -37,22 +34,25 @@ impl<'ctx> PropertyMonitor<'ctx> {
         match p {
             And(a,b)|Or(a,b) => Self::is_boolean_only(a)&&Self::is_boolean_only(b),
             Le(_,_)|RateBound(_,_) => true,
-            _ => false,
         }
     }
 
     pub fn tick(&mut self, window: &Trace) -> bool {
         debug_assert!(window.len() <= self.horizon);
-        let holds = crate::dsl::eval_prop(&self.prop, window); // helper bridging to Rust monitor
+        let _holds = crate::dsl::eval_prop(&self.prop, window); // helper bridging to Rust monitor
         let delta = if Self::is_boolean_only(&self.prop) {
-            delta_clauses_tseitin(&self.prop, holds, &mut self.enc_state)
+            // For now, use the fallback encoder
+            delta_clauses(&self.prop, window)
         } else {
             delta_clauses(&self.prop, window) // earlier empty‑clause strategy
         };
-        match self.sat.unsat_recycle(delta).expect("solver") {
+        
+        // Create a new SatCore for this operation
+        let mut sat = SatCore::new(&self.ctx, self.horizon);
+        match sat.unsat_recycle(delta).expect("solver") {
             SatResult::Sat => { self.last_core.clear(); true },
             SatResult::Unsat => {
-                self.last_core = self.sat.get_unsat_core().unwrap_or_default();
+                self.last_core = sat.get_unsat_core().unwrap_or_default();
                 false
             },
             SatResult::Unknown => { log::warn!("Z3 UNKNOWN"); false },

@@ -1,10 +1,12 @@
 //! Minimal Rust mirror of the Lean DSL, plus a tiny executable `eval_prop`.
 //! Only what the proof-engine needs right now.
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+use serde::Serialize;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
 pub enum Var { P, T, Flow, Valve }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum Prop {
     Le(Var, f64),
     RateBound(Var, f64),

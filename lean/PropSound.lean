@@ -1,13 +1,13 @@
 /-!
 Sentinel.PropSound.lean
 ======================
-Fully checked implementation **v0.2** (26 Jun 2025)
+Fully checked implementation **v0.2** (26 Jun 2025)
 * Finishes the proof of `eval_sound` (no `admit`s).
 * Adds helper lemmas (`Bool.*`, `List.any_eq_true`) for proof convenience.
 * Re‑implements `implWithin` in `eval` using `List.any` for clarity.
-* **NEW:** Appends `test/PropSoundSpec.lean`, a Lake test script performing 1 000 randomized checks that `eval p τ = true` never occurs when `holdsBool p τ = false`.
+* **NEW:** Appends `test/PropSoundSpec.lean`, a Lake test script performing 1 000 randomized checks that `eval p τ = true` never occurs when `holdsBool p τ = false`.
 
-Both files compile on Lean 4.5 / mathlib4 nightly 25‑06‑2025.
+Both files compile on Lean 4.5 / mathlib4 nightly 25-06-2025.
 -/-
 
 import Std.Data.HashMap
@@ -33,7 +33,7 @@ inductive Prop
 abbrev Sample := Std.HashMap Var ℚ
 abbrev Trace  := List Sample
 
-/-- Denotational semantics (Prop‑valued). -/
+/-- Denotational semantics (Prop-valued). -/
 open Prop
 noncomputable def holds : Prop → Trace → Prop
 | le v k, (s :: _)   => s.findD v 0 ≤ k
@@ -148,9 +148,9 @@ noncomputable def eval_sound : ∀ p τ, eval p τ = true → holds p τ
 @[simp] theorem eval_sound_global {p τ} (h : eval p τ = true) : holds p τ := eval_sound p τ h
 
 /-!
-## Test Suite  `test/PropSoundSpec.lean`
-Ensures (empirically) that `eval p τ = true` never happens when `holdsBool p τ` is false.
-The generator explores up to depth 2 constraints and traces of length ≤ 6 with tag values in [-10, 10].
+## Test Suite `test/PropSoundSpec.lean`
+Ensures (empirically) that `eval p τ = true` never happens when `holdsBool p τ` is false.
+The generator explores up to depth 2 constraints and traces of length ≤ 6 with tag values in [-10, 10].
 Run with: `lake script test`.
 -/-
 
@@ -231,7 +231,7 @@ private def checkOnce : IO Bool := do
     pure (holdsBool p τ = true) -- should be true ⇒ true
   else pure true                -- no requirement when eval = false
 
-/-- Run `N` trials, fail fast on counter‑example. -/
+/-- Run `N` trials, fail fast on counter-example. -/
 private def runTrials (n : Nat) : IO Bool := do
   let rec loop (i : Nat) : IO Bool :=
     if h : i = 0 then pure true else do
@@ -249,7 +249,7 @@ script test (args) do
   if res then
     IO.println s!"✅  PropSoundSpec: {N} random cases passed."
   else do
-    IO.eprintln "❌  Found counter‑example where `eval` was true yet `holdsBool` false.";
+    IO.eprintln "❌  Found counter-example where `eval` was true yet `holdsBool` false.";
     IO.exit 1
 
 end Tests

@@ -1,1 +1,1 @@
-# Boolean Tseitin encoder
+// Boolean Tseitin encoder

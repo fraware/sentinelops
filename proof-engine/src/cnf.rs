@@ -21,17 +21,16 @@
 //     via extraction.
 // =============================================================
 
-use crate::sat::{Clause, Lit};
-use crate::dsl::{Prop, Trace};       // `dsl` module re‑exports `Prop` and helpers.
-use crate::monitor::prop_monitor;     // Rust mirror of Lean `eval` (already vetted).
+use crate::sat::Clause;
+use crate::dsl::{Prop, Trace, eval_prop};       // `dsl` module re‑exports `Prop` and helpers.
 
 /// Generate the **delta** clause set for the new tick.
 ///
-/// * If `prop_monitor(p, τ)` is `true` → returns `vec![]` (no change ⇒ SAT).
+/// * If `eval_prop(p, τ)` is `true` → returns `vec![]` (no change ⇒ SAT).
 /// * Else (*violation*) → returns `[Clause(vec![])]` i.e. the empty clause ⊥
 ///   which makes the solver UNSAT until clause is aged out of the window.
 pub fn delta_clauses(p: &Prop, window: &Trace) -> Vec<Clause> {
-    if prop_monitor(p, window) {
+    if eval_prop(p, window) {
         Vec::new()
     } else {
         vec![Clause(Vec::new())] // empty clause ⇒ immediate UNSAT
